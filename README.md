@@ -4,7 +4,7 @@ Powershell Password Generator
 ## Parameters
  - **PasswordMask**: (Default: {word}#{integer}) You can add any charecter before, in between or after placeholders.
  - **WordlistDirectory**: (Default: .\wordlists) Where the wordlists can be found.
- - **Count**: (Default: 1) How many password to generate.
+ - **Count**: (Default: 1) How many password(s) to generate.
  - **NoInfo**: (Default: false) Whether or not to display info about the mask and wordlists used to the console.
 
 ### Pasword mask options
