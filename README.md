@@ -2,19 +2,22 @@
 Powershell Password Generator
 
 ## Parameters
- - **PasswordMask**: (Default: {word}#{integer}) You can add any charecter before, in between or after placeholders.
+ - **PasswordMask**: (Default: {wl:colours}{wl:random}#{int}) You can add any charecter before, in between or after placeholders.
  - **WordlistDirectory**: (Default: .\wordlists) Where the wordlists can be found.
  - **Count**: (Default: 1) How many password(s) to generate.
  - **NoInfo**: (Default: false) Whether or not to display info about the mask and wordlists used to the console.
 
 ### Pasword mask options
- - **{word}** - A random word from a random wordlist. If used more than once, more than 1 wordlist will be used.  
- - **{seperator}** - '@' or '#' *might remove this*   
+ - **{wl:random}** - A random word from a random wordlist. If used more than once, more than 1 wordlist will be used.  
  - **{int}** - An integer between 1000 and 9999.  
- - **{vowel}** - A.. vowel.  
- - **{conso}** - Aaaand a consonent.  
- - **{vowelUpper}** - Uppercase vowel.  
- - **{consoUpper}** - Uppercase consonent.  
+ - **{vowel_lower}** - A.. vowel.  
+ - **{consonant_lower}** - Aaaand a consonent.  
+ - **{vowel_upper}** - Uppercase vowel.  
+ - **{consonant_upper}** - Uppercase consonent.  
+
+#### Use a specific wordlist
+If you'd like to include a word from a specific wordlist in your password use {wl:<wordlist_name>}.
+Replace `<wordlist_name>` with the name of the .txt file in the wordlist directory. 
 
 ## Usage
 `.\generate.ps1` Create 1 password with the default parameters.
@@ -22,10 +25,10 @@ Powershell Password Generator
 ### More examples
 
 **Generate 3 jibberish, but pronouncable passwords**  
-`.\generate.ps1 -PasswordMask "{consoUpper}{vowel}{vowel}{conso}{vowel}{int}" -Count 3`
->Generating passwords using pattern: {consoUpper}{vowel}{vowel}{conso}{vowel}{int}  
-Juigu1809  
-Foohi6971  
+`.\generate.ps1 -PasswordMask "{consonant_upper}{vowel_lower}{vowel_lower}{consonant_lower}{vowel_lower}{int}" -Count 3`
+>Generating passwords using pattern: {consonant_upper}{vowel_lower}{vowel_lower}{consonant_lower}{vowel_lower}{int}  
+Juigu1809
+Foohi6971
 Hoese1874
 
 **Generate 3 passwords without the fluff**  
