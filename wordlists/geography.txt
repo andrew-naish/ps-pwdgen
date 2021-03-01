@@ -1,0 +1,12 @@
+Beach
+Desert
+Forest
+Hill
+Lake
+Mountain
+Ocean
+Pond
+River
+Sea
+Stream
+Valley
