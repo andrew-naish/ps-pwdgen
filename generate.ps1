@@ -5,9 +5,6 @@
     $PasswordMask="{wl:colours}{wl:random}#{int}"
 )
 
-$formatters = @()
-$rtnpwdList = @()
-
 $vowel_upper = @('A', 'E', 'I', 'O', 'U')
 $vowel_lower = @('a', 'e', 'i', 'o', 'u')
 $consonant_lower = @("b", "c", "d", "f", "g", "h", "j", "k", "l", "m", "n", "p", "q", "r", "s", "t", "v", "w", "x", "y", "z")
@@ -40,6 +37,7 @@ function ParseExplicitWordlistMask ($ExplicitWordlistMask) {
 ## Main
 
 # parse the password mask
+$formatters = @()
 [regex]::Matches($PasswordMask, "{((wl:)?\w)+}|(.)" ) | ForEach-Object {
     
     $new_formatter = New-Object PSObject -Property @{
@@ -89,36 +87,36 @@ if (-not $NoInfo) {
 }
 
 # do the thing
+$all_passwords = @()
 for ($i = 0; $i -lt $Count; $i++) {
 
     # each element of the password will go here, we'll join it in the end
-    $pw = @()
+    $this_password = @()
     
     foreach ($item in $formatters | Sort-Object Index) {
 
         switch -Wildcard ($item.Value) {
             
-            '{wl:*}'            {$pw += GetWordFromWordlist($($item.wordlist)); break}
-            '{int}'             {$pw += Get-Random -Minimum 1000 -Maximum 9999; break}
-            '{vowel_lower}'           {$pw += $vowel_lower | Get-Random; break}
-            '{consonant_lower}' {$pw += $consonant_lower | Get-Random; break}
-            '{vowel_upper}'     {$pw += $vowel_upper | Get-Random; break}
-            '{consonant_upper}' {$pw += $consonant_upper | Get-Random; break}
+            '{wl:*}'            {$this_password += GetWordFromWordlist($($item.wordlist)); break}
+            '{int}'             {$this_password += Get-Random -Minimum 1000 -Maximum 9999; break}
+            '{vowel_lower}'     {$this_password += $vowel_lower | Get-Random; break}
+            '{consonant_lower}' {$this_password += $consonant_lower | Get-Random; break}
+            '{vowel_upper}'     {$this_password += $vowel_upper | Get-Random; break}
+            '{consonant_upper}' {$this_password += $consonant_upper | Get-Random; break}
 
-            default {$pw += $item.Value}
+            default {$this_password += $item.Value}
 
         }
     }
 
-    $rtnpwdList += -join $pw
+    $all_passwords += (-join $this_password)
 }
 
 ## Output
 
-if ($rtnpwdList.Count -eq 1) {
-    Write-Output $rtnpwdList[0]
-    } 
-
+if ($all_passwords.Count -eq 1) {
+    Write-Output $all_passwords[0]
+} 
 else {
-    return $rtnpwdList
-    }
+    return $all_passwords
+}
