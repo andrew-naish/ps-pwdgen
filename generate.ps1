@@ -98,7 +98,6 @@ for ($i = 0; $i -lt $Count; $i++) {
 
         switch -Wildcard ($item.Value) {
             
-            '{wl:random}'       {$pw += GetWordFromWordlist($($item.wordlist)); break}
             '{wl:*}'            {$pw += GetWordFromWordlist($($item.wordlist)); break}
             '{int}'             {$pw += Get-Random -Minimum 1000 -Maximum 9999; break}
             '{vowel_lower}'           {$pw += $vowel_lower | Get-Random; break}
