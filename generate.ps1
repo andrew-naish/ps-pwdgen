@@ -52,9 +52,12 @@ $formatters = @()
 
 $wordy_formatters = $formatters | Where-Object {$_.Value -like "{wl:*}"}
 
-# check if too many wordlists
-if ([int]($wordy_formatters| Measure-Object).Count -gt $wordlists_available.Count) {
-    throw "Too many formatters which will require a random wordlist. Either add more wordlists or downgrade your formatter game!"
+# check if too many wordlists ..or none.
+if ([int]($wordy_formatters| Measure-Object).Count -eq 0) {
+    throw "Password mask requires a wordlist and the wordlist directory contains no wordlists OR is unreachable."
+} 
+elseif ([int]($wordy_formatters| Measure-Object).Count -gt $wordlists_available.Count) {
+	throw "Too many formatters which will require a random wordlist. Either add more wordlists or downgrade your formatter game!"
 }
 
 # assign a wordlist to wordy formatters

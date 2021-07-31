@@ -16,8 +16,8 @@ Powershell Password Generator
  - **{consonant_upper}** - Uppercase consonent.  
 
 #### Use a specific wordlist
-If you'd like to include a word from a specific wordlist in your password use {wl:<wordlist_name>}.
-Replace `<wordlist_name>` with the name of the .txt file in the wordlist directory. 
+If you'd like to include a word from a specific wordlist in your password use {wl:<wordlist_name>}.  
+Replace '<wordlist_name>' with the name of the .txt file in the wordlist directory. 
 
 ## Usage
 `.\generate.ps1` Create 1 password with the default parameters.
