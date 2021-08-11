@@ -2,7 +2,7 @@
     [switch]$NoInfo,
     $WordlistDirectory=".\wordlists",
     $Count=1,
-    $PasswordMask="{wl:colours}{wl:random}#{int}"
+    $PasswordMask="{wl:adjectives}{wl:random}#{int}"
 )
 
 $vowel_upper = @('A', 'E', 'I', 'O', 'U')
