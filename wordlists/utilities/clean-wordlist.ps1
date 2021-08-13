@@ -2,92 +2,139 @@
 
 param(
 
-    #[Parameter(Mandatory=$true, ParameterSetName="ByLength")]
-    #[Parameter(Mandatory=$true, ParameterSetName="BySentiment")]
-    [Parameter(Mandatory=$true, ParameterSetName="ExplicitWordlists")]
-    [String[]] $Wordlists,
+    # Path to a specific wordlist.
+    [Parameter(Mandatory = $true, HelpMessage="Path to a specific wordlist.")]
+    [String] $Wordlist,
 
-    #[Parameter(Mandatory=$true, ParameterSetName="ByLength")]
-    #[Parameter(Mandatory=$true, ParameterSetName="BySentiment")]
-    [Parameter(Mandatory=$true, ParameterSetName="AllWordlists")]
-    [Switch] $AllWordlists,
-
-    ## ByLength
-
-    # Parameter help description
-    [Parameter(Mandatory=$false, ParameterSetName="ExplicitWordlists")]
-    [Parameter(Mandatory=$false, ParameterSetName="AllWordlists")]
-    [Parameter(Mandatory=$false, ParameterSetName="ByLength")]
+    # Check word length, if less than defined min or more than defined max, remove it.
+    #   If this param is used, DynamicParams will be added in the block below.
+    [Parameter(Mandatory = $false, HelpMessage="Check word length, if less than defined min or more than defined max, remove it.")]
     [Switch] $ByLength,
 
-    # Parameter help description
-    [Parameter(Mandatory=$true, ParameterSetName="ByLength")]
-    [Int] $MinLength,
-
-    # Parameter help description
-    [Parameter(Mandatory=$true, ParameterSetName="ByLength")]
-    [Int] $MaxLength,
-
-    ## BySentiment
-
-    # Parameter help description
-    [Parameter(Mandatory=$false, ParameterSetName="ExplicitWordlists")]
-    [Parameter(Mandatory=$false, ParameterSetName="AllWordlists")]
-    [Parameter(Mandatory=$false, ParameterSetName="BySentiment")]
-    [Switch] $BySentiment,
-    
-    # Parameter help description
-    [Parameter(Mandatory=$true, ParameterSetName="ExplicitWordlists")]
-    [Parameter(Mandatory=$true, ParameterSetName="AllWordlists")]
-    [Parameter(Mandatory=$true, ParameterSetName="BySentiment")]
-    [String] $AWSCredentialProfile,
-    
-    # Parameter help description
-    [Parameter(Mandatory=$false, ParameterSetName="ExplicitWordlists")]
-    [Parameter(Mandatory=$false, ParameterSetName="AllWordlists")]
-    [Parameter(Mandatory=$false, ParameterSetName="BySentiment")]
-    [Int] $AWSBatchRequestLimit = 10,
-
-    # Parameter help description
-    [Parameter(Mandatory=$false, ParameterSetName="ExplicitWordlists")]
-    [Parameter(Mandatory=$false, ParameterSetName="AllWordlists")]
-    [Parameter(Mandatory=$false, ParameterSetName="BySentiment")]
-    [String] $AWSLanguageCode = 'en'
+    # Requires a sentiment report. Remove all words which are below the sentiment threshold.
+    #   If this param is used, DynamicParams will be added in the block below.
+    [Parameter(Mandatory = $false, HelpMessage="Requires a sentiment report. Remove all words which are below the sentiment threshold.")]
+    [Switch] $BySentiment
 
 )
 
-# define backup dir
-$backup_dir_path = ".\wordlist_backups\backup_$(Get-Date -Format "yyyyMMdd-HHmmss")" 
+DynamicParam {
 
-# create dir
-if ( -not (Test-Path "$backup_dir_path")) {
-    New-Item -ItemType Directory -Name "$bkDirName" -Force | Out-Null
-}
+    # all params go here ..
+    $param_dictionary = [System.Management.Automation.RuntimeDefinedParameterDictionary]::new()
 
-$titlecaseConverter = (Get-Culture).TextInfo
+    ## ByLength
+    if ($ByLength) {
+        
+        # Define: MinLength
+            $bylength_minlen_param_attr = New-Object -Type System.Management.Automation.ParameterAttribute
+            $bylength_minlen_param_attr.Mandatory = $false
 
-$bkDirName = "wordlist_backup"
+            $bylength_minlen_param_attrcol = New-Object -Type System.Collections.ObjectModel.Collection[System.Attribute]
+            $bylength_minlen_param_attrcol.Add($bylength_minlen_param_attr)
 
-$wordlists = Get-ChildItem ".\" -Filter "*.txt"
-foreach ($wl in $wordlists) {
-    # Import file, Backup then Delete original
-    [array]$content = $wl | Get-Content
-    Copy-Item -Path $wl -Destination .\$bkDirName -Force
-    Remove-Item $wl -Force
+            # create parameter object
+            $bylength_minlen_param = New-Object -Type System.Management.Automation.RuntimeDefinedParameter("MinLength", [Int], $bylength_minlen_param_attrcol)
+            $bylength_minlen_param.Value = 3 # default value
 
-    # Build new wordlist
-    $newContent = @(); foreach ($word in $content) {
-        $nw = [regex]::replace($word, "[^a-zA-Z]", "")
-        $nw = $titlecaseConverter.ToTitleCase($nw)
+            # commit
+            $param_dictionary.Add('MinLength', $bylength_minlen_param)
 
-        $newContent += $nw
+        # Define: MaxLength
+            $bylength_maxlen_param_attr = New-Object -Type System.Management.Automation.ParameterAttribute
+            $bylength_maxlen_param_attr.Mandatory = $true
+            
+            $bylength_maxlen_param_attrcol = New-Object -Type System.Collections.ObjectModel.Collection[System.Attribute]
+            $bylength_maxlen_param_attrcol.Add($bylength_maxlen_param_attr)
+
+            # create parameter object
+            $bylength_maxlen_param = New-Object -Type System.Management.Automation.RuntimeDefinedParameter("MaxLength", [Int], $bylength_maxlen_param_attrcol)
+
+            # commit
+            $param_dictionary.Add('MaxLength', $bylength_maxlen_param)
+
     }
 
-    $stream = [System.IO.StreamWriter] $($wl.FullName)
-        $ar = $newContent | Sort-Object
-        for ($i = 0; $i -lt [int]$ar.Length; $i++)
-        { 
-            $stream.WriteLine($ar[$i])
+    ## BySentiment
+    if ($BySentiment) {
+
+        # Define: SentimentReport
+            $bysentiment_sentimentrpt_param_attr = New-Object -Type System.Management.Automation.ParameterAttribute
+            $bysentiment_sentimentrpt_param_attr.Mandatory = $true
+
+            $bysentiment_sentimentrpt_param_attrcol = New-Object -Type System.Collections.ObjectModel.Collection[System.Attribute]
+            $bysentiment_sentimentrpt_param_attrcol.Add($bysentiment_sentimentrpt_param_attr)
+
+            # create parameter object
+            $bysentiment_sentimentrpt_param = New-Object -Type System.Management.Automation.RuntimeDefinedParameter("SentimentReport", [String], $bysentiment_sentimentrpt_param_attrcol)
+
+            # commit
+            $param_dictionary.Add('SentimentReport', $bysentiment_sentimentrpt_param)
+    
+    }
+
+    # return params
+    return $param_dictionary
+
+}
+
+Begin {
+
+    Read-Host "PAUSE"
+
+}
+
+Process {
+
+
+    ## TODO: Backup current wordlists
+
+    ## TODO: Do the basic stuff 
+    #    - Convert to TitleCase
+    #    - Remove chars which are not [a-zA-Z]
+
+    ## TODO: If ByLength
+    #    - Do stuff
+
+    ## TODO: If BySentiment
+    #    - Do stuff
+
+    Read-Host "PAUSE - Before Old Code"
+    ### Old code below ##
+
+    # define backup dir
+    $backup_dir_path = ".\wordlist_backups\backup_$(Get-Date -Format "yyyyMMdd-HHmmss")" 
+
+    # create dir
+    if ( -not (Test-Path "$backup_dir_path")) {
+        New-Item -ItemType Directory -Name "$bkDirName" -Force | Out-Null
+    }
+
+    $titlecaseConverter = (Get-Culture).TextInfo
+    $bkDirName = "wordlist_backup"
+
+    $wordlists = Get-ChildItem ".\" -Filter "*.txt"
+    foreach ($wl in $wordlists) {
+        # Import file, Backup then Delete original
+        [array]$content = $wl | Get-Content
+        Copy-Item -Path $wl -Destination .\$bkDirName -Force
+        Remove-Item $wl -Force
+
+        # Build new wordlist
+        $newContent = @(); foreach ($word in $content) {
+            $nw = [regex]::replace($word, "[^a-zA-Z]", "")
+            $nw = $titlecaseConverter.ToTitleCase($nw)
+
+            $newContent += $nw
         }
-        $stream.Close()
+
+        $stream = [System.IO.StreamWriter] $($wl.FullName)
+            $ar = $newContent | Sort-Object
+            for ($i = 0; $i -lt [int]$ar.Length; $i++)
+            { 
+                $stream.WriteLine($ar[$i])
+            }
+            $stream.Close()
+    }
+
 }
