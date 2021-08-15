@@ -6,6 +6,5 @@ Grey
 Orange
 Pink
 Purple
-Red
 White
 Yellow

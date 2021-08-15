@@ -7,6 +7,5 @@ Mountain
 Ocean
 Pond
 River
-Sea
 Stream
 Valley

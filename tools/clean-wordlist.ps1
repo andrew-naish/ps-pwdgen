@@ -36,7 +36,7 @@ DynamicParam {
 
             # create parameter object
             $bylength_minlen_param = New-Object -Type System.Management.Automation.RuntimeDefinedParameter("MinLength", [Int], $bylength_minlen_param_attrcol)
-            $bylength_minlen_param.Value = 3 # default value
+            $bylength_minlen_param.Value = 4 # default value
 
             # commit
             $param_dictionary.Add('MinLength', $bylength_minlen_param)
@@ -85,24 +85,41 @@ Begin {
     # import threadjob module
     Import-Module "..\dependancies\ThreadJob\ThreadJob.psd1"
 
-    # TODO: import sqllite3.dll
-
     # funct
-    function MessageAndContinue($Word, $Message) {
-        Write-Output "Removing word: $word, Reason: $Message"
-        continue
+    function WriteToLog($Message, $Level = "INFO") {
+
+        $nice_date_with_space = Get-Date -Format 'dd-MM-yyyy HH:mm:ss'
+
+        # write to stream
+        $message_to_commit = ("{0} :: {1} :: $Message" -f $nice_date_with_space, $Level)
+        $logs_streamwriter.WriteLine($message_to_commit)
+
     }
 
     # var
-    $wordlists_dir = "..\wordlists"
-    $wordlists_plaintext_dir = "$wordlists_dir\plaintext"
-    $wordlists_plaintext_backups_dir = "$wordlists_plaintext_dir\backups"
+    $nice_date = Get-Date -Format 'ddMMyyyy-HHmmss'
+    $wordlists_dir = Resolve-path "..\wordlists"
+    $wordlists_backups_dir = "$wordlists_dir\backups"
+    $wordlists_backups_fullpath = ("$wordlists_backups_dir\{0}_wordlistbackup.zip" -f $nice_date)
+    $logs_dir = Resolve-path ".\logs"
+    $logs_fullpath = ("$logs_dir\{0}_log_clean-wordlists.txt" -f $nice_date)
+
+    # initialise log
+    $logs_streamwriter = [System.IO.StreamWriter] $logs_fullpath
+    WriteToLog -Message "Log started"
 
     # handle dynamic params
+    WriteToLog -Message "Parameters used:"
     if ( $ByLength ) {
+        WriteToLog -Message "- ByLength: $true"
+        WriteToLog -Message "- MinLength: $($param_dictionary.MinLength.Value)"
+        WriteToLog -Message "- MaxLength: $($param_dictionary.MaxLength.Value)"
         $acceptable_range = ($param_dictionary.MinLength.Value)..($param_dictionary.MaxLength.Value)
     }
+
     if ( $BySentiment ) {
+        WriteToLog -Message "- BySentiment: $true"
+        WriteToLog -Message "- SentimentThreshold: $($param_dictionary.SentimentThreshold.Value)"
         $sentiment_threshold = $param_dictionary.SentimentThreshold.Value
         $sentiment_map = @{
             "NEGATIVE" = 0
@@ -112,120 +129,121 @@ Begin {
         }
     }
 
-}
+} # end: begin
 
 ## Main
 
 Process {
 
     ## backup current wordlists
-    Write-Output "Backing up current wordlists"
 
     # create dir if does not exist
-    if ( -not (Test-Path $wordlists_plaintext_backups_dir)) 
-    { New-Item -Path $wordlists_plaintext_backups_dir -ItemType Directory -Force | Out-Null }
+    if ( -not (Test-Path $wordlists_backups_dir)) 
+    { New-Item -Path $wordlists_backups_dir -ItemType Directory -Force | Out-Null }
 
-    # do the thing
-    Compress-Archive -Path "$wordlists_plaintext_dir\*.txt" -DestinationPath "$wordlists_plaintext_backups_dir\$(Get-Date -Format 'ddMMyyyy-HHmmss')_wordlistbackup.zip" | Out-Null
+    # backup to zip file
+    Compress-Archive -Path "$wordlists_dir\*.*" -DestinationPath "$wordlists_backups_fullpath" | Out-Null
+    WriteToLog -Message "Wordlist backup created: $wordlists_backups_fullpath"
 
     ## itterate wordlists
-    Get-ChildItem -Path $wordlists_plaintext_dir -Filter "*.txt" | ForEach-Object {
+    WriteToLog -Message "Processing wordlists"
+    $wordlists = Get-ChildItem -Path $wordlists_dir -Filter "*.txt"
+    foreach ($wordlist in $wordlists ) {
 
-        $wordlist_current_name = $_.BaseName
-        Write-Output "On Wordlist: $wordlist_current_name"
+        $wordlist_fullname = $wordlist.FullName
+        WriteToLog -Message "On wordlist: $wordlist_fullname"
 
-        # import wordlist
-        $wordlist_current_content = Get-Content $_.FullName
+        # import existing wordlist and remove
+        $wordlist_content = Get-Content "$($wordlist_fullname)"
+        Remove-Item -Path "$($wordlist_fullname)" -Force
+        WriteToLog -Message "Imported and deleted original"
 
-        # remove current
-        #$_ | Remove-Item -Force
+        # prepare output stream
+        $wordlist_streamwriter = [System.IO.StreamWriter] $wordlist_fullname
+        WriteToLog -Message "Created new wordlist file"
 
-        # prepare
-        $wordlist_new = New-Object -Type Collections.Generic.List[String]
-
-        # check if can sentiment
+        # if $BySentiment was used, check if there's a sentiment report present
         if ( $BySentiment ) {
-
-            $sentiment_report_path = "$wordlists_plaintext_dir\$($wordlist_current_name)_sentimentreport.csv"
+            WriteToLog -Message "Checking for sentiment report:"
+            $sentiment_report_path = "$wordlists_dir\$($wordlist.BaseName)_sentimentreport.csv"
             $sentiment_report_present = $false
 
+            # check if there's a sentiment report
             if ( Test-Path "$sentiment_report_path" ) {
+                WriteToLog -Message "- Sentiment report present"
                 $sentiment_report_present = $true
                 $sentiment_report = Import-Csv $sentiment_report_path
             }
-
+            else {
+                WriteToLog -Level "WARN" -Message "- Sentiment report not present"
+            }
         }
 
-        foreach ( $word in $wordlist_current_content ) {
+        # initialise counters
+        [int]$words_included_counter = 0
+        [int]$words_excluded_counter = 0
+        $wordlist_count = ($wordlist_content | Measure-Object).Count
+
+        ## itterate words in wordlist
+        WriteToLog -Message "Processing words"
+        foreach ( $word in ($wordlist_content | Sort-Object) ) {
+
+            # pre-emptively increment, will derement if we reach then end!
+            $words_excluded_counter++
+
+            # remove non-alpha chars
+            $word = [regex]::replace($word, "[^a-zA-Z]", "")
 
             # if empty, skip
             if ( [string]::IsNullOrEmpty($word) ) {
+                WriteToLog -Message "- Skipped empty line"
                 continue
             }
 
             # by length
             if ( $ByLength ) {
                 if ($word.Length -notin $acceptable_range) {
-                    MessageAndContinue $word "Length is not in acceptable range"
+                    WriteToLog -Message "- Word excluded: $word, Reason: Length is not in acceptable range"
+                    continue
                 } 
             }
 
             # by sentiment
             if ( $BySentiment -AND $sentiment_report_present ) {
                 $sentiment = ($sentiment_report | Where-Object {$_.Word -eq $word}).Sentiment
-                if ($sentiment_map[$sentiment] -lt $sentiment_threshold) {
-                    MessageAndContinue $word "Word is below sentiment threshold"
+                if ($null -ne $sentiment) {
+                    if ($sentiment_map[$sentiment] -lt $sentiment_threshold) {
+                        WriteToLog -Message "- Word excluded: $word, Reason: Below sentiment threshold"
+                        continue
+                    }
                 }
             }
 
-            # TODO: convert to titlecase
+            # convert to titlecase
+            $word = ((Get-Culture).TextInfo).ToTitleCase($word)
 
-            # TODO: remove non a-z chars
+            # if we got to here, the word is ok, write it!
+            $wordlist_streamwriter.WriteLine($word)
 
-            # word is ok
-            #Write-Output "Word ok: $word"
-            $wordlist_new.Add($word)
+            # counters
+            $words_excluded_counter--
+            $words_included_counter++
 
-        }
+        } # end: fe word
 
-        # TODO: sort
+        # close the stream!
+        $wordlist_streamwriter.Close()
+        WriteToLog -Message "Finished processing words:"
+        WriteToLog -Message "- Total words: $wordlist_count"
+        WriteToLog -Message "- Words included: $words_included_counter"
+        WriteToLog -Message "- Words excluded: $words_excluded_counter"
 
-        # TODO: dump as text
+    } # end: fe wordlist
+    WriteToLog -Message "Finished processing wordlists"
 
-        # TODO: dump as .bin ?
+} # end: process
 
-        Write-Output ""
-    }
-
-
-    <#
-    $titlecaseConverter = (Get-Culture).TextInfo
-    $bkDirName = "wordlist_backup"
-
-    $wordlists = Get-ChildItem ".\" -Filter "*.txt"
-    foreach ($wl in $wordlists) {
-        # Import file, Backup then Delete original
-        [array]$content = $wl | Get-Content
-        Copy-Item -Path $wl -Destination .\$bkDirName -Force
-        Remove-Item $wl -Force
-
-        # Build new wordlist
-        $newContent = @(); foreach ($word in $content) {
-            $nw = [regex]::replace($word, "[^a-zA-Z]", "")
-            $nw = $titlecaseConverter.ToTitleCase($nw)
-
-            $newContent += $nw
-        }
-
-        $stream = [System.IO.StreamWriter] $($wl.FullName)
-            $ar = $newContent | Sort-Object
-            for ($i = 0; $i -lt [int]$ar.Length; $i++)
-            { 
-                $stream.WriteLine($ar[$i])
-            }
-            $stream.Close()
-    }
-
-    #>
-
+End {
+    # close streams
+    $logs_streamwriter.Close()
 }
