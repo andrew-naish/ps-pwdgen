@@ -1,4 +1,3 @@
-Amsterdam
 Astana
 Athens
 Baku
@@ -23,7 +22,6 @@ Prague
 Riga
 Rome
 Sofia
-Stockholm
 Tirana
 Vienna
 Warsaw

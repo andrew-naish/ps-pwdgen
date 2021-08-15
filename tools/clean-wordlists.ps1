@@ -180,9 +180,10 @@ Process {
         }
 
         # initialise counters
+        [int]$words_counter = 0
         [int]$words_included_counter = 0
         [int]$words_excluded_counter = 0
-        $wordlist_count = ($wordlist_content | Measure-Object).Count
+        $wordlist_total_lines = ($wordlist_content | Measure-Object).Count
 
         ## itterate words in wordlist
         WriteToLog -Message "Processing words"
@@ -190,6 +191,7 @@ Process {
 
             # pre-emptively increment, will derement if we reach then end!
             $words_excluded_counter++
+            $words_counter++ # not this one though
 
             # remove non-alpha chars
             $word = [regex]::replace($word, "[^a-zA-Z]", "")
@@ -223,7 +225,12 @@ Process {
             $word = ((Get-Culture).TextInfo).ToTitleCase($word)
 
             # if we got to here, the word is ok, write it!
-            $wordlist_streamwriter.WriteLine($word)
+            # just use write if it's the last item (to avoid a blank line at the end)
+            if ($words_counter -eq $wordlist_total_lines) {
+                $wordlist_streamwriter.Write($word)
+            } else {
+                $wordlist_streamwriter.WriteLine($word)
+            }
 
             # counters
             $words_excluded_counter--
@@ -234,7 +241,7 @@ Process {
         # close the stream!
         $wordlist_streamwriter.Close()
         WriteToLog -Message "Finished processing words:"
-        WriteToLog -Message "- Total words: $wordlist_count"
+        WriteToLog -Message "- Total words: $wordlist_total_lines"
         WriteToLog -Message "- Words included: $words_included_counter"
         WriteToLog -Message "- Words excluded: $words_excluded_counter"
 

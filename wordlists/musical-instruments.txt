@@ -3,7 +3,6 @@ Banjo
 Bassoon
 Bell
 Bongo
-Castanets
 Cello
 Clarinet
 Cornet
@@ -13,7 +12,6 @@ Dulcian
 Flute
 Gong
 Guitar
-Harmonica
 Harp
 Lute
 Maracas
